@@ -25,6 +25,18 @@ test_cases = {1:[[[2.16135,-1.42635,1.55109],
               4:[],
               5:[]}
 
+q1, q2, q3, q4, q5, q7, q7 = symbols('q1:8')
+d1, d2, d3, d4, d5, d6, d7 = symbols('d1:8')
+a0, a1, a2, a3, a4, a5, a6 = symbols('a0:7')
+alpha0, alpha1, alpha2, alpha3, alpha4, alpha5, alpha6 = symbols('alpha0:7')
+# DH Parameters
+dh = {alpha0:    0,      a0:     0,      d1: 0.75,
+     alpha1:    -pi/2,  a1:     0.35,   d2: 0,      q2: q2-pi/2,
+     alpha2:    0,      a2:     1.25,   d3: 0,
+     alpha3:    -pi/2,  a3:     -0.054, d4: 1.50,
+     alpha4:    pi/2,   a4:     0,      d5: 0,
+     alpha5:    -pi/2,  a5:     0,      d6: 0,
+     alpha6:    0,      a6:     0,      d7: 0.303,  q7: 0}
 
 def test_code(test_case):
     ## Set up code
@@ -63,9 +75,12 @@ def test_code(test_case):
     ## 
 
     ## Insert IK code here!
+    wc = test_case[1]
+    xc = wc[0]
+    yc = wc[1]
+    zc = wc[2]
     
-    theta1 = 0
-    theta2 = 0
+    theta1 = atan2(yc, xc)
     theta3 = 0
     theta4 = 0
     theta5 = 0
