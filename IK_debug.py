@@ -94,6 +94,23 @@ def test_code(test_case):
     ## as the input and output the position of your end effector as your_ee = [x,y,z]
 
     ## (OPTIONAL) YOUR CODE HERE!
+    T0_1 = Matrix([[             cos(q1),            -sin(q1),            0,              a0],
+                   [ sin(q1)*cos(alpha0), cos(q1)*cos(alpha0), -sin(alpha0), -sin(alpha0)*d1],
+                   [ sin(q1)*sin(alpha0), cos(q1)*sin(alpha0),  cos(alpha0),  cos(alpha0)*d1],
+                   [                   0,                   0,            0,               1]])
+    T1_2 = Matrix([[cos(q2), -sin(q2), 0, a1],
+                   [sin(q2) * cos(alpha1), cos(q2) * cos(alpha1), -sin(alpha1), -sin(alpha1) * d2],
+                   [sin(q2) * sin(alpha1), cos(q2) * sin(alpha1), cos(alpha1), cos(alpha1) * d2],
+                   [0, 0, 0, 1]])
+    T2_3 = Matrix([[cos(q3), -sin(q3), 0, a2],
+                   [sin(q3) * cos(alpha2), cos(q3) * cos(alpha2), -sin(alpha2), -sin(alpha2) * d3],
+                   [sin(q3) * sin(alpha2), cos(q3) * sin(alpha2), cos(alpha2), cos(alpha2) * d3],
+                   [0, 0, 0, 1]])
+    T3_4 = Matrix([[cos(q4), -sin(q4), 0, a3],
+                   [sin(q4) * cos(alpha3), cos(q4) * cos(alpha3), -sin(alpha3), -sin(alpha3) * d4],
+                   [sin(q4) * sin(alpha3), cos(q4) * sin(alpha3), cos(alpha3), cos(alpha3) * d4],
+                   [0, 0, 0, 1]])
+    T0_4 = T0_1 * T1_2 * T2_3 * T3_4
 
     ## End your code input for forward kinematics here!
     ########################################################################################
