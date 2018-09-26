@@ -2,6 +2,7 @@ from sympy import *
 from time import time
 from mpmath import radians
 import tf
+import math
 
 '''
 Format of test case is [ [[EE position],[EE orientation as quaternions]],[WC location],[joint angles]]
@@ -104,17 +105,16 @@ def test_code(test_case):
     # Translate x-z plane, such that its origin is joint2
     x = x - a1
     z = zc - d1
-    offset = atan2(a3, d4)
+    t = sqrt(a3**2 + d4**2)
     # Because:
-    #   x = a2 * sin(theta2) + d4 * cos(theta2 + theta3 - offset)
-    #   z = a2 * cos(theta2) - d4 * sin(theta2 + theta3 - offset)
-    #   x^2 + z^2 = a2^2 + d4^2 - 2 * a2 * d4 * sin(theta3 - offset)
-    # So:
-    #   (theta3 - offset) is known
-    s3_off = (-x**2 - z**2 + a2**2 + d4**2) / (2 * a2 * d4)
-    c3_off = sqrt(1 - s3_off**2)
-    theta3_off = atan2(s3_off, c3_off)
-    theta3 = theta3_off + offset
+    #   x = a2 * cos(theta2) + t * cos(theta2 + theta3)
+    #   z = a2 * sin(theta2) + t * sin(theta2 + theta3)
+    #   x^2 + z^2 = a2^2 + d4^2 - 2 * a2 * t * sin(theta3)
+    #s3_off = (x**2 + z**2 - a2**2 - d4**2) / (2 * a2 * d4)
+    c3 = (x**2 + z**2 - a2**2 - t**2) / (2 * a2 * t)
+    s3 = sqrt(1 - c3**2)
+    theta3 = atan2(s3, c3) - math.pi/2
+    theta2 = 0
     theta4 = 0
     theta5 = 0
     theta6 = 0
