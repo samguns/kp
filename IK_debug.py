@@ -94,26 +94,37 @@ def test_code(test_case):
     ## 
 
     ## Insert IK code here!
+    t = sqrt(a3 ** 2 + d4 ** 2)
+    offset = -atan2(a3, d4)
+
     wc = test_case[1]
     xc = wc[0]
     yc = wc[1]
     zc = wc[2]
-    
+
     theta1 = atan2(yc, xc)
-    # Revert xc back to x-z plane
-    x = xc / cos(theta1)
+    x = sqrt(xc ** 2 + yc ** 2)
     # Translate x-z plane, such that its origin is joint2
-    x = x - a1
+    positive_quandrant = True
+    if xc < 0:
+        # Revert xc back to positive x-z plane
+        positive_quandrant = False
+        x = x + a1
+    else:
+        x = x - a1
+
     z = zc - d1
-    t = sqrt(a3**2 + d4**2)
+
     # Because:
-    #   x = a2 * cos(theta2) + t * cos(theta2 + theta3)
-    #   z = a2 * sin(theta2) + t * sin(theta2 + theta3)
-    #   x^2 + z^2 = a2^2 + d4^2 - 2 * a2 * t * sin(theta3)
-    #s3_off = (x**2 + z**2 - a2**2 - d4**2) / (2 * a2 * d4)
-    c3 = (x**2 + z**2 - a2**2 - t**2) / (2 * a2 * t)
-    s3 = sqrt(1 - c3**2)
-    theta3 = atan2(s3, c3) - math.pi/2
+    #   x = a2 * sin(theta2) + t * cos(theta2 + (theta3 + offset))
+    #   z = a2 * cos(theta2) - t * sin(theta2 + (theta3 + offset))
+    #   x^2 + z^2 = a2^2 + t^2 - 2 * a2 * t * sin(theta3 + offset)
+    s3_off = (a2**2 + t**2 - x**2 - z**2) / (2 * a2 * t)
+    c3_off = sqrt(1 - s3_off**2)
+    if positive_quandrant == True:
+        theta3 = atan2(s3_off, c3_off) - offset
+    else:
+        theta3 = -(math.pi + atan2(s3_off, c3_off) + offset)
     theta2 = 0
     theta4 = 0
     theta5 = 0
