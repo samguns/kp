@@ -56,6 +56,8 @@ alpha5 = -pi/2
 d5 = 0
 alpha6 = 0
 d7 = 0.303
+t = sqrt(a3 ** 2 + d4 ** 2)
+offset = -atan2(a3, d4)
 
 def test_code(test_case):
     ## Set up code
@@ -94,9 +96,6 @@ def test_code(test_case):
     ## 
 
     ## Insert IK code here!
-    t = sqrt(a3 ** 2 + d4 ** 2)
-    offset = -atan2(a3, d4)
-
     wc = test_case[1]
     xc = wc[0]
     yc = wc[1]
@@ -109,7 +108,7 @@ def test_code(test_case):
     if xc < 0:
         # Revert xc back to positive x-z plane
         positive_quandrant = False
-        x = x + a1
+        x = -x - a1
     else:
         x = x - a1
 
@@ -121,11 +120,20 @@ def test_code(test_case):
     #   x^2 + z^2 = a2^2 + t^2 - 2 * a2 * t * sin(theta3 + offset)
     s3_off = (a2**2 + t**2 - x**2 - z**2) / (2 * a2 * t)
     c3_off = sqrt(1 - s3_off**2)
+
+    #   k1 = a2 - t * s3_off
+    #   k2 = t * c3_off
+    #   delta + theta2 = atan2(x, z) and delta = atan2(k2, k1)
+    #   theta2 = atan2(x, z) - atan2(k2, k1)
+    k1 = a2 - t * s3_off
+    k2 = t * c3_off
     if positive_quandrant == True:
         theta3 = atan2(s3_off, c3_off) - offset
+        theta2 = atan2(x, z) - atan2(k2, k1)
     else:
-        theta3 = -(math.pi + atan2(s3_off, c3_off) + offset)
-    theta2 = 0
+        theta3 = atan2(-s3_off, c3_off) - offset - math.pi
+        theta2 = atan2(x, z) - atan2(-k2, k1)
+
     theta4 = 0
     theta5 = 0
     theta6 = 0
@@ -216,6 +224,6 @@ def test_code(test_case):
 
 if __name__ == "__main__":
     # Change test case number for different scenarios
-    test_case_number = 1
+    test_case_number = 3
 
     test_code(test_cases[test_case_number])
