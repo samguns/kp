@@ -58,6 +58,14 @@ alpha6 = 0
 d7 = 0.303
 t = sqrt(a3 ** 2 + d4 ** 2)
 offset = -atan2(a3, d4)
+theta2_high = 45 * math.pi / 180
+theta2_low = -85 * math.pi / 180
+s2_range = [sin(theta2_low), sin(theta2_high)]
+
+theta3_high = 65 * math.pi / 180
+theta3_low = -210 * math.pi / 180
+s3_range = [sin(theta3_high), sin(theta3_low)]
+
 
 def test_code(test_case):
     ## Set up code
@@ -104,13 +112,11 @@ def test_code(test_case):
     theta1 = atan2(yc, xc)
     x = sqrt(xc ** 2 + yc ** 2)
     # Translate x-z plane, such that its origin is joint2
-    positive_quandrant = True
-    if xc < 0:
-        # Revert xc back to positive x-z plane
-        positive_quandrant = False
-        x = -x - a1
-    else:
-        x = x - a1
+    # Because joint2 and joint3 are both revolute, the wrist center
+    # position can't simply determine in which quandrant joint2 is
+    # located. So nominate two xs.
+    x_1 = x - a1
+    x_2 = x + a1
 
     z = zc - d1
 
@@ -118,21 +124,23 @@ def test_code(test_case):
     #   x = a2 * sin(theta2) + t * cos(theta2 + (theta3 + offset))
     #   z = a2 * cos(theta2) - t * sin(theta2 + (theta3 + offset))
     #   x^2 + z^2 = a2^2 + t^2 - 2 * a2 * t * sin(theta3 + offset)
-    s3_off = (a2**2 + t**2 - x**2 - z**2) / (2 * a2 * t)
-    c3_off = sqrt(1 - s3_off**2)
+    s3_off_1 = (a2**2 + t**2 - x_1**2 - z**2) / (2 * a2 * t)
+    s3_off_2 = (a2**2 + t**2 - x_2**2 - z**2) / (2 * a2 * t)
+    c3_off_1 = sqrt(1 - s3_off_1**2)
+    c3_off_2 = sqrt(1 - s3_off_2**2)
+    theta3_1 = atan2(s3_off_1, c3_off_1) - offset
+    theta3_2 = -atan2(s3_off_2, c3_off_2) - offset - math.pi
 
     #   k1 = a2 - t * s3_off
     #   k2 = t * c3_off
     #   delta + theta2 = atan2(x, z) and delta = atan2(k2, k1)
     #   theta2 = atan2(x, z) - atan2(k2, k1)
-    k1 = a2 - t * s3_off
-    k2 = t * c3_off
-    if positive_quandrant == True:
-        theta3 = atan2(s3_off, c3_off) - offset
-        theta2 = atan2(x, z) - atan2(k2, k1)
-    else:
-        theta3 = atan2(-s3_off, c3_off) - offset - math.pi
-        theta2 = atan2(x, z) - atan2(-k2, k1)
+    k1_1 = a2 - t * s3_off_1
+    k1_2 = a2 - t * s3_off_2
+    k2_1 = t * c3_off_1
+    k2_2 = t * c3_off_2
+    theta2_1 = atan2(x_1, z) - atan2(k2_1, k1_1)
+    theta2_2 = -(atan2(x_2, z) - atan2(k2_2, k1_2))
 
     theta4 = 0
     theta5 = 0
@@ -224,6 +232,6 @@ def test_code(test_case):
 
 if __name__ == "__main__":
     # Change test case number for different scenarios
-    test_case_number = 3
+    test_case_number = 1
 
     test_code(test_cases[test_case_number])
