@@ -253,9 +253,9 @@ def test_code(test_case):
     r32 = R3_6[2,1]
     r33 = R3_6[2,2]
 
-    alpha = atan2(r21, r11) # rotation about Z-axis
-    beta = atan2(-r31, sqrt(r11 * r11 + r21 * r21))  # rotation about Y-axis
-    gamma = atan2(r32, r33)  # rotation about X-axis
+    alpha = atan2(r21, r11)
+    beta = atan2(-r31, sqrt(r11 * r11 + r21 * r21))
+    gamma = atan2(r32, r33)
     rtd = 180 / math.pi
     print(alpha.evalf() * rtd, beta.evalf() * rtd, gamma.evalf() * rtd)
     theta4 = alpha
@@ -277,6 +277,15 @@ def test_code(test_case):
                  [0, 1, 0, 0],
                  [0, 0, 1, 0.33],
                  [0, 0, 0, 1]])
+
+    # Flip theta4, 5, 6
+    theta4 += math.pi
+    theta5 = -theta5
+    theta6 += math.pi
+
+    first = abs(alpha.evalf()) + abs(beta.evalf()) + abs(gamma.evalf())
+    second = abs(theta4) + abs(theta5) + abs(theta6)
+    print("first", first, "second", second)
 
     r0_1 = rot_z(theta1)
     t0_1 = t0 * r0_1
