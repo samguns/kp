@@ -61,13 +61,6 @@ alpha6 = 0
 d7 = 0.303
 t = sqrt(a3 ** 2 + d4 ** 2)
 offset = -atan2(a3, d4)
-theta2_high = 45 * math.pi / 180
-theta2_low = -85 * math.pi / 180
-s2_range = [sin(theta2_low), sin(theta2_high)]
-
-theta3_high = 65 * math.pi / 180
-theta3_low = -210 * math.pi / 180
-s3_range = [sin(theta3_high), sin(theta3_low)]
 
 
 def test_code(test_case):
@@ -100,6 +93,37 @@ def test_code(test_case):
         def __init__(self,comb):
             self.poses = [comb]
 
+    def rot_x(q):
+        R_x = Matrix([[1, 0, 0, 0],
+                      [0, cos(q), -sin(q), 0],
+                      [0, sin(q), cos(q), 0],
+                      [0, 0,      0,    1]])
+        return R_x
+
+    def rot_y(q):
+        R_y = Matrix([[cos(q), 0, sin(q), 0],
+                      [0, 1, 0, 0],
+                      [-sin(q), 0, cos(q), 0],
+                      [0, 0, 0, 1]])
+        return R_y
+
+    def rot_z(q):
+        R_z = Matrix([[cos(q), -sin(q), 0, 0],
+                      [sin(q), cos(q), 0, 0],
+                      [0, 0, 1, 0],
+                      [0, 0, 0, 1]])
+        return R_z
+
+    Rc_y = Matrix([[cos(-math.pi / 2), 0, sin(-math.pi / 2), 0],
+                   [0, 1, 0, 0],
+                   [-sin(-math.pi / 2), 0, cos(-math.pi / 2), 0],
+                   [0, 0, 0, 1]])
+    Rc_z = Matrix([[cos(math.pi), -sin(math.pi), 0, 0],
+                   [sin(math.pi), cos(math.pi), 0, 0],
+                   [0, 0, 1, 0],
+                   [0, 0, 0, 1]])
+    R_corr = Rc_z * Rc_y
+
     req = Pose(comb)
     start_time = time()
     
@@ -107,7 +131,15 @@ def test_code(test_case):
     ## 
 
     ## Insert IK code here!
-    wc = test_case[1]
+    (roll, pitch, yaw) = tf.transformations.euler_from_quaternion([req.poses[0].orientation.x,
+                                                                   req.poses[0].orientation.y,
+                                                                   req.poses[0].orientation.z,
+                                                                   req.poses[0].orientation.w])
+
+    Rrpy = (rot_z(yaw) * rot_y(pitch) * rot_x(roll) * R_corr).evalf(5)
+    EE = Matrix([req.poses[0].position.x, req.poses[0].position.y, req.poses[0].position.z])
+    wc = EE - (d6 + d7) * Rrpy[:3, 2]
+
     xc = wc[0]
     yc = wc[1]
     zc = wc[2]
@@ -153,7 +185,7 @@ def test_code(test_case):
         k2_1 = t * c3_off_1
         theta2_1 = atan2(x_1, z) - atan2(k2_1, k1_1)
         theta1_1 = dir
-        total_1 = abs(theta1_1.evalf()) + abs(theta2_1.evalf()) + abs(theta3_1.evalf())
+        total_1 = abs(theta1_1.evalf(5)) + abs(theta2_1.evalf(5)) + abs(theta3_1.evalf(5))
 
     theta1_2 = None
     theta2_2 = None
@@ -170,15 +202,15 @@ def test_code(test_case):
             theta1_2 = dir + math.pi
         else:
             theta1_2 = dir - math.pi
-        total_2 = abs(theta1_2.evalf()) + abs(theta2_2.evalf()) + abs(theta3_2.evalf())
+        total_2 = abs(theta1_2.evalf(5)) + abs(theta2_2.evalf(5)) + abs(theta3_2.evalf(5))
 
     theta1 = theta1_1
     theta2 = theta2_1
     theta3 = theta3_1
-    if (solvable_1 == True and solvable_2 == True) and (total_1 >= total_2):
-        theta1 = theta1_2
-        theta2 = theta2_2
-        theta3 = theta3_2
+    # if (solvable_1 == True and solvable_2 == True) and (total_1 >= total_2):
+    #     theta1 = theta1_2
+    #     theta2 = theta2_2
+    #     theta3 = theta3_2
 
     theta4 = 0
     theta5 = 0
@@ -205,59 +237,13 @@ def test_code(test_case):
     T0_3 = T0_1 * T1_2 * T2_3
     T0_4 = T0_1 * T1_2 * T2_3 * T3_4
 
-    (roll, pitch, yaw) = tf.transformations.euler_from_quaternion([req.poses[0].orientation.x,
-                                                                  req.poses[0].orientation.y,
-                                                                  req.poses[0].orientation.z,
-                                                                  req.poses[0].orientation.w])
-
-    Rc_y = Matrix([[cos(-math.pi/2),     0,      sin(-math.pi/2),    0],
-                  [0,                   1,      0,                  0],
-                  [-sin(-math.pi/2),    0,      cos(-math.pi/2),    0],
-                  [0,                   0,      0,                  1]])
-    Rc_z = Matrix([[cos(math.pi),        -sin(math.pi),  0,  0],
-                  [sin(math.pi),        cos(math.pi),   0,  0],
-                  [0,                   0,              1,  0],
-                  [0,                   0,              0,  1]])
-    R_corr = Rc_z * Rc_y
-
-    def rot_x(q):
-        R_x = Matrix([[1, 0, 0, 0],
-                      [0, cos(q), -sin(q), 0],
-                      [0, sin(q), cos(q), 0],
-                      [0, 0,      0,    1]])
-        return R_x
-
-    def rot_y(q):
-        R_y = Matrix([[cos(q), 0, sin(q), 0],
-                      [0, 1, 0, 0],
-                      [-sin(q), 0, cos(q), 0],
-                      [0, 0, 0, 1]])
-        return R_y
-
-    def rot_z(q):
-        R_z = Matrix([[cos(q), -sin(q), 0, 0],
-                      [sin(q), cos(q), 0, 0],
-                      [0, 0, 1, 0],
-                      [0, 0, 0, 1]])
-        return R_z
-
-    Rrpy = rot_z(yaw) * rot_y(pitch) * rot_x(roll) * R_corr
-    EE = Matrix([req.poses[0].position.x, req.poses[0].position.y, req.poses[0].position.z])
-    wrist_center = EE - (d6 + d7) * Rrpy[:3,2]
-
     R0_3 = T0_3.evalf(subs={q1: theta1, q2: theta2, q3: theta3})
     R3_6 = R0_3.inv("LU") * Rrpy
-    r31 = R3_6[2,0]
-    r11 = R3_6[0,0]
-    r21 = R3_6[1,0]
-    r32 = R3_6[2,1]
-    r33 = R3_6[2,2]
 
-    alpha = atan2(r21, r11)
-    beta = atan2(-r31, sqrt(r11 * r11 + r21 * r21))
-    gamma = atan2(r32, r33)
-    rtd = 180 / math.pi
-    print(alpha.evalf() * rtd, beta.evalf() * rtd, gamma.evalf() * rtd)
+    alpha = atan2(R3_6[2, 2], -R3_6[0, 2])
+    beta = atan2(sqrt(R3_6[0, 2] * R3_6[0, 2] + R3_6[2, 2] * R3_6[2, 2]), R3_6[1, 2])
+    gamma = atan2(-R3_6[1, 1], R3_6[1, 0])
+
     theta4 = alpha
     theta5 = beta
     theta6 = gamma
@@ -287,38 +273,38 @@ def test_code(test_case):
     second = abs(theta4) + abs(theta5) + abs(theta6)
     print("first", first, "second", second)
 
-    r0_1 = rot_z(theta1)
-    t0_1 = t0 * r0_1
-
-    r1_2 = rot_y(theta2)
-    t1_2 = r1_2
-    t1_2[:3, 3] += Matrix([0.35, 0, 0.42])
-
-    r2_3 = rot_y(theta3)
-    t2_3 = r2_3
-    t2_3[:3, 3] += Matrix([0, 0, 1.25])
-
-    r3_4 = rot_x(theta4)
-    t3_4 = r3_4
-    t3_4[:3, 3] += Matrix([0.96, 0, -0.054])
-
-    r4_5 = rot_y(theta5)
-    t4_5 = r4_5
-    t4_5[:3, 3] += Matrix([0.54, 0, 0])
-
-    r5_6 = rot_x(theta6)
-    t5_6 = r5_6
-    t5_6[:3, 3] += Matrix([0.303, 0, 0])
-
-    t_ee = t0_1 * t1_2 * t2_3 * t3_4 * t4_5 * t5_6
-    print(t_ee[:3,3])
+    # r0_1 = rot_z(theta1)
+    # t0_1 = t0 * r0_1
+    #
+    # r1_2 = rot_y(theta2)
+    # t1_2 = r1_2
+    # t1_2[:3, 3] += Matrix([0.35, 0, 0.42])
+    #
+    # r2_3 = rot_y(theta3)
+    # t2_3 = r2_3
+    # t2_3[:3, 3] += Matrix([0, 0, 1.25])
+    #
+    # r3_4 = rot_x(theta4)
+    # t3_4 = r3_4
+    # t3_4[:3, 3] += Matrix([0.96, 0, -0.054])
+    #
+    # r4_5 = rot_y(theta5)
+    # t4_5 = r4_5
+    # t4_5[:3, 3] += Matrix([0.54, 0, 0])
+    #
+    # r5_6 = rot_x(theta6)
+    # t5_6 = r5_6
+    # t5_6[:3, 3] += Matrix([0.303, 0, 0])
+    #
+    # t_ee = t0_1 * t1_2 * t2_3 * t3_4 * t4_5 * t5_6
+    # print(t_ee[:3,3])
 
 
     ## End your code input for forward kinematics here!
     ########################################################################################
 
     ## For error analysis please set the following variables of your WC location and EE location in the format of [x,y,z]
-    your_wc = wrist_center # <--- Load your calculated WC values in this array
+    your_wc = wc # <--- Load your calculated WC values in this array
     your_ee = ee[:3,3] # <--- Load your calculated end effector value from your forward kinematics
     ########################################################################################
 

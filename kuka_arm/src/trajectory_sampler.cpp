@@ -216,6 +216,25 @@ TrajectorySampler::TrajectorySampler(ros::NodeHandle nh)
      */
     if (demo)
     {
+      robot_trajectory->setRobotTrajectoryMsg(robot_kinematic_state, my_plan.trajectory_);
+      for (std::size_t i = 0; i < robot_trajectory->getWayPointCount(); ++i)
+      {
+        const Eigen::Affine3d& eef_pose =
+          robot_trajectory->getWayPoint(i).getGlobalLinkTransform(joint_model_group->getLinkModel("link_6"));
+        geometry_msgs::Pose gripper_pose;
+        tf::poseEigenToMsg(eef_pose, gripper_pose);
+        path.push_back(gripper_pose);
+      }
+      path_size = path.size();
+      srv.request.poses = path;
+      if (client.call(srv))
+      {
+        ROS_DEBUG_STREAM("Current Pose: " << srv.response);
+      }
+      else
+      {
+        ROS_ERROR("Failed to call service calculate_ik");
+      }
       // Display current state
       visual_tools.publishText(text_pose, "Moving to the target location",
                                rviz_visual_tools::WHITE, rviz_visual_tools::XXXXLARGE);
@@ -324,7 +343,7 @@ TrajectorySampler::TrajectorySampler(ros::NodeHandle nh)
                              rviz_visual_tools::WHITE, rviz_visual_tools::XXXXLARGE);
     visual_tools.trigger();
     CloseGripper();
-    ros::Duration(2.0).sleep();
+    ros::Duration(5.0).sleep();
     visual_tools.prompt("next step");
 
     /*
@@ -368,6 +387,26 @@ TrajectorySampler::TrajectorySampler(ros::NodeHandle nh)
      */
     if (demo)
     {
+    robot_trajectory->setRobotTrajectoryMsg(robot_kinematic_state, my_plan.trajectory_);
+    path.clear();
+    for (std::size_t i = 0; i < robot_trajectory->getWayPointCount(); ++i)
+      {
+        const Eigen::Affine3d& eef_pose =
+          robot_trajectory->getWayPoint(i).getGlobalLinkTransform(joint_model_group->getLinkModel("link_6"));
+        geometry_msgs::Pose gripper_pose;
+        tf::poseEigenToMsg(eef_pose, gripper_pose);
+        path.push_back(gripper_pose);
+      }
+      path_size = path.size();
+      srv.request.poses = path;
+      if (client.call(srv))
+      {
+        ROS_INFO_STREAM("Response from Server: " << srv.response);
+      }
+      else
+      {
+        ROS_ERROR("Failed to call service calculate_ik");
+      }
       // Display current state
       visual_tools.publishText(text_pose, "Moving to the drop-off location",
                                rviz_visual_tools::WHITE, rviz_visual_tools::XXXXLARGE);

@@ -133,7 +133,7 @@ def handle_calculate_IK(req):
                  req.poses[x].orientation.z, req.poses[x].orientation.w])
 
             # Compensate for rotation discrepancy between DH parameters and Gazebo
-            Rrpy = rot_z(yaw) * rot_y(pitch) * rot_x(roll) * R_corr
+            Rrpy = (rot_z(yaw) * rot_y(pitch) * rot_x(roll) * R_corr).evalf(5)
             EE = Matrix([px, py, pz])
             wc = EE - (d6 + d7) * Rrpy[:3, 2]
 
@@ -175,14 +175,14 @@ def handle_calculate_IK(req):
             if solvable_2 is True:
                 s3_off_2 = (a2 ** 2 + t ** 2 - x_2 ** 2 - z ** 2) / (2 * a2 * t)
                 c3_off_2 = sqrt(1 - s3_off_2 ** 2)
-                theta3_2 = -atan2(s3_off_2, c3_off_2) - offset - math.pi
+                theta3_2 = -atan2(s3_off_2, c3_off_2) - offset - pi
                 k1_2 = a2 - t * s3_off_2
                 k2_2 = t * c3_off_2
                 theta2_2 = -(atan2(x_2, z) - atan2(k2_2, k1_2))
                 if dir < 0:
-                    theta1_2 = dir + math.pi
+                    theta1_2 = dir + pi
                 else:
-                    theta1_2 = dir - math.pi
+                    theta1_2 = dir - pi
                 total_2 = abs(theta1_2.evalf()) + abs(theta2_2.evalf()) + abs(theta3_2.evalf())
             theta1 = theta1_1
             theta2 = theta2_1
@@ -196,30 +196,37 @@ def handle_calculate_IK(req):
             Rrpy = rot_z(yaw) * rot_y(pitch) * rot_x(roll) * R_corr
             R0_3 = T0_3.evalf(subs={q1: theta1, q2: theta2, q3: theta3})
             R3_6 = R0_3.inv("LU") * Rrpy
-            r31 = R3_6[2, 0]
-            r11 = R3_6[0, 0]
-            r21 = R3_6[1, 0]
-            r32 = R3_6[2, 1]
-            r33 = R3_6[2, 2]
 
-            alpha = atan2(r21, r11)
-            beta = atan2(-r31, sqrt(r11 * r11 + r21 * r21))
-            gamma = atan2(r32, r33)
+            alpha = atan2(R3_6[2, 2], -R3_6[0, 2])
+            beta = atan2(sqrt(R3_6[0, 2] * R3_6[0, 2] + R3_6[2, 2] * R3_6[2, 2]), R3_6[1, 2])
+            gamma = atan2(-R3_6[1, 1], R3_6[1, 0])
 
             flipped_alpha = alpha + pi
             flipped_beta = -beta
             flipped_gamma = gamma + pi
 
-            eff = abs(alpha.evalf()) + abs(beta.evalf()) + abs(gamma.evalf())
-            flipped_eff = abs(flipped_alpha.evalf()) + abs(flipped_beta.evalf()) + abs(flipped_gamma.evalf())
-            theta4 = alpha
-            theta5 = beta
-            theta6 = gamma
+            if -pi < gamma < pi:
+                theta4 = alpha
+                theta5 = beta
+                theta6 = gamma
+            else:
+                theta4 = flipped_alpha
+                theta5 = flipped_beta
+                theta6 = flipped_gamma
+
+            # if lasts < flipped_lasts:
+            #     theta4 = alpha
+            #     theta5 = beta
+            #     theta6 = gamma
+            # else:
+            #     theta4 = flipped_alpha
+            #     theta5 = flipped_beta
+            #     theta6 = flipped_gamma
 
             # Populate response for the IK request
             # In the next line replace theta1,theta2...,theta6 by your joint angle variables
-        joint_trajectory_point.positions = [theta1, theta2, theta3, theta4, theta5, theta6]
-        joint_trajectory_list.append(joint_trajectory_point)
+            joint_trajectory_point.positions = [theta1, theta2, theta3, theta4, theta5, theta6]
+            joint_trajectory_list.append(joint_trajectory_point)
 
         rospy.loginfo("length of Joint Trajectory List: %s" % len(joint_trajectory_list))
         return CalculateIKResponse(joint_trajectory_list)
