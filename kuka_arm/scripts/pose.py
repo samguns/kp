@@ -19,12 +19,20 @@ def handle_demo_poses(req):
             py = req.poses[x].position.y
             pz = req.poses[x].position.z
 
+            ox = req.poses[x].orientation.x
+            oy = req.poses[x].orientation.y
+            oz = req.poses[x].orientation.z
+            ow = req.poses[x].orientation.w
+
             (roll, pitch, yaw) = tf.transformations.euler_from_quaternion(
                 [req.poses[x].orientation.x, req.poses[x].orientation.y,
                  req.poses[x].orientation.z, req.poses[x].orientation.w])
 
-            print("x ", px, " y ", py, " z ", pz, " roll ", roll, " pitch ", pitch, " yaw ", yaw)
-            print("")
+            print(px, py, pz)
+            print(ox, oy, oz, ow)
+
+            # print("x ", px, " y ", py, " z ", pz, " roll ", roll, " pitch ", pitch, " yaw ", yaw)
+            # print("")
 
         joint_trajectory_list = []
         return CalculateIKResponse(joint_trajectory_list)

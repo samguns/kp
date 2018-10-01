@@ -19,40 +19,35 @@ from mpmath import *
 from sympy import *
 
 
-Rc_y = Matrix([[cos(-pi/2),     0,      sin(-pi/2),     0],
-              [0,               1,      0,              0],
-              [-sin(-pi/2),     0,      cos(-pi/2),     0],
-              [0,               0,      0,              1]])
+Rc_y = Matrix([[cos(-pi/2),     0,      sin(-pi/2)],
+              [0,               1,      0],
+              [-sin(-pi/2),     0,      cos(-pi/2)]])
 
-Rc_z = Matrix([[cos(pi),        -sin(pi),   0,  0],
-              [sin(pi),         cos(pi),    0,  0],
-              [0,               0,          1,  0],
-              [0,               0,          0,  1]])
+Rc_z = Matrix([[cos(pi),        -sin(pi),   0],
+              [sin(pi),         cos(pi),    0],
+              [0,               0,          1]])
 
 R_corr = Rc_z * Rc_y
 
 
 def rot_x(q):
-    R_x = Matrix([[1, 0, 0, 0],
-                  [0, cos(q), -sin(q), 0],
-                  [0, sin(q), cos(q), 0],
-                  [0, 0,      0,    1]])
+    R_x = Matrix([[1, 0, 0],
+                  [0, cos(q), -sin(q)],
+                  [0, sin(q), cos(q)]])
     return R_x
 
 
 def rot_y(q):
-    R_y = Matrix([[cos(q), 0, sin(q), 0],
-                  [0, 1, 0, 0],
-                  [-sin(q), 0, cos(q), 0],
-                  [0, 0, 0, 1]])
+    R_y = Matrix([[cos(q), 0, sin(q)],
+                  [0, 1, 0],
+                  [-sin(q), 0, cos(q)]])
     return R_y
 
 
 def rot_z(q):
-    R_z = Matrix([[cos(q), -sin(q), 0, 0],
-                  [sin(q), cos(q), 0, 0],
-                  [0, 0, 1, 0],
-                  [0, 0, 0, 1]])
+    R_z = Matrix([[cos(q), -sin(q), 0],
+                  [sin(q), cos(q), 0],
+                  [0, 0, 1]])
     return R_z
 
 
@@ -81,6 +76,7 @@ d7 = 0.303
 q7 = 0
 t = sqrt(a3 ** 2 + d4 ** 2)
 offset = -atan2(a3, d4)
+theta5_max = 125 * pi / 180
 
 
 # Define Modified DH Transformation matrix
@@ -114,6 +110,7 @@ def handle_calculate_IK(req):
         #
         #
         ###
+        theta4 = theta5 = theta6 = 0
 
         # Initialize service response
         joint_trajectory_list = []
@@ -124,16 +121,19 @@ def handle_calculate_IK(req):
             # Extract end-effector position and orientation from request
             # px,py,pz = end-effector position
             # roll, pitch, yaw = end-effector orientation
-            px = req.poses[x].position.x
-            py = req.poses[x].position.y
-            pz = req.poses[x].position.z
+            px = round(req.poses[x].position.x, 5)
+            py = round(req.poses[x].position.y, 5)
+            pz = round(req.poses[x].position.z, 5)
 
             (roll, pitch, yaw) = tf.transformations.euler_from_quaternion(
                 [req.poses[x].orientation.x, req.poses[x].orientation.y,
                  req.poses[x].orientation.z, req.poses[x].orientation.w])
+            roll = round(roll, 6)
+            pitch = round(pitch, 6)
+            yaw = round(yaw, 6)
 
             # Compensate for rotation discrepancy between DH parameters and Gazebo
-            Rrpy = (rot_z(yaw) * rot_y(pitch) * rot_x(roll) * R_corr).evalf(5)
+            Rrpy = rot_z(yaw) * rot_y(pitch) * rot_x(roll) * R_corr
             EE = Matrix([px, py, pz])
             wc = EE - (d6 + d7) * Rrpy[:3, 2]
 
@@ -167,7 +167,6 @@ def handle_calculate_IK(req):
                 k2_1 = t * c3_off_1
                 theta2_1 = atan2(x_1, z) - atan2(k2_1, k1_1)
                 theta1_1 = dir
-                total_1 = abs(theta1_1.evalf()) + abs(theta2_1.evalf()) + abs(theta3_1.evalf())
             theta1_2 = None
             theta2_2 = None
             theta3_2 = None
@@ -187,41 +186,18 @@ def handle_calculate_IK(req):
             theta1 = theta1_1
             theta2 = theta2_1
             theta3 = theta3_1
-            # if (solvable_1 == True and solvable_2 == True) and (total_1 >= total_2):
-            #     theta1 = theta1_2
-            #     theta2 = theta2_2
-            #     theta3 = theta3_2
+            if (solvable_1 == True and solvable_2 == True) and (total_1 > total_2):
+                theta1 = theta1_2
+                theta2 = theta2_2
+                theta3 = theta3_2
 
             T0_3 = T0_1 * T1_2 * T2_3
-            Rrpy = rot_z(yaw) * rot_y(pitch) * rot_x(roll) * R_corr
-            R0_3 = T0_3.evalf(subs={q1: theta1, q2: theta2, q3: theta3})
-            R3_6 = R0_3.inv("LU") * Rrpy
+            R0_3 = T0_3.evalf(subs={q1: theta1, q2: theta2, q3: theta3})[:3, :3]
+            R3_6 = R0_3.transpose() * Rrpy
 
-            alpha = atan2(R3_6[2, 2], -R3_6[0, 2])
-            beta = atan2(sqrt(R3_6[0, 2] * R3_6[0, 2] + R3_6[2, 2] * R3_6[2, 2]), R3_6[1, 2])
-            gamma = atan2(-R3_6[1, 1], R3_6[1, 0])
-
-            flipped_alpha = alpha + pi
-            flipped_beta = -beta
-            flipped_gamma = gamma + pi
-
-            if -pi < gamma < pi:
-                theta4 = alpha
-                theta5 = beta
-                theta6 = gamma
-            else:
-                theta4 = flipped_alpha
-                theta5 = flipped_beta
-                theta6 = flipped_gamma
-
-            # if lasts < flipped_lasts:
-            #     theta4 = alpha
-            #     theta5 = beta
-            #     theta6 = gamma
-            # else:
-            #     theta4 = flipped_alpha
-            #     theta5 = flipped_beta
-            #     theta6 = flipped_gamma
+            theta4 = round(atan2(R3_6[2, 2], -R3_6[0, 2]), 6)
+            theta5 = round(atan2(sqrt(R3_6[0, 2] * R3_6[0, 2] + R3_6[2, 2] * R3_6[2, 2]), R3_6[1, 2]), 6)
+            theta6 = round(atan2(-R3_6[1, 1], R3_6[1, 0]), 6)
 
             # Populate response for the IK request
             # In the next line replace theta1,theta2...,theta6 by your joint angle variables

@@ -23,7 +23,10 @@ test_cases = {1:[[[2.16135,-1.42635,1.55109],
                   [0.01735,-0.2179,0.9025,0.371016]],
                   [-1.1669,-0.17989,0.85137],
                   [-2.99,-0.12,0.94,4.06,1.29,-4.12]],
-              4:[],
+              4:[[[2.043005111569693, -3.1096512428539714e-07, 1.945989855980285],
+                  [7.522170572900507e-08, 3.0923593877121052e-06, -7.610506104946355e-08, 0.9999999999952129]],
+                 [0, 0, 0],
+                 [-0.000000, -0.088250, 0.085013, 0.000000, 0.003244, 0.000000]],
               5:[]}
 
 q1, q2, q3, q4, q5, q6, q7 = symbols('q1:8')
@@ -94,34 +97,29 @@ def test_code(test_case):
             self.poses = [comb]
 
     def rot_x(q):
-        R_x = Matrix([[1, 0, 0, 0],
-                      [0, cos(q), -sin(q), 0],
-                      [0, sin(q), cos(q), 0],
-                      [0, 0,      0,    1]])
+        R_x = Matrix([[1, 0, 0],
+                      [0, cos(q), -sin(q)],
+                      [0, sin(q), cos(q)]])
         return R_x
 
     def rot_y(q):
-        R_y = Matrix([[cos(q), 0, sin(q), 0],
-                      [0, 1, 0, 0],
-                      [-sin(q), 0, cos(q), 0],
-                      [0, 0, 0, 1]])
+        R_y = Matrix([[cos(q), 0, sin(q)],
+                      [0, 1, 0],
+                      [-sin(q), 0, cos(q)]])
         return R_y
 
     def rot_z(q):
-        R_z = Matrix([[cos(q), -sin(q), 0, 0],
-                      [sin(q), cos(q), 0, 0],
-                      [0, 0, 1, 0],
-                      [0, 0, 0, 1]])
+        R_z = Matrix([[cos(q), -sin(q), 0],
+                      [sin(q), cos(q), 0],
+                      [0, 0, 1]])
         return R_z
 
-    Rc_y = Matrix([[cos(-math.pi / 2), 0, sin(-math.pi / 2), 0],
-                   [0, 1, 0, 0],
-                   [-sin(-math.pi / 2), 0, cos(-math.pi / 2), 0],
-                   [0, 0, 0, 1]])
-    Rc_z = Matrix([[cos(math.pi), -sin(math.pi), 0, 0],
-                   [sin(math.pi), cos(math.pi), 0, 0],
-                   [0, 0, 1, 0],
-                   [0, 0, 0, 1]])
+    Rc_y = Matrix([[cos(-math.pi / 2), 0, sin(-math.pi / 2)],
+                   [0, 1, 0],
+                   [-sin(-math.pi / 2), 0, cos(-math.pi / 2)]])
+    Rc_z = Matrix([[cos(math.pi), -sin(math.pi), 0],
+                   [sin(math.pi), cos(math.pi), 0],
+                   [0, 0, 1]])
     R_corr = Rc_z * Rc_y
 
     req = Pose(comb)
@@ -136,7 +134,7 @@ def test_code(test_case):
                                                                    req.poses[0].orientation.z,
                                                                    req.poses[0].orientation.w])
 
-    Rrpy = (rot_z(yaw) * rot_y(pitch) * rot_x(roll) * R_corr).evalf(5)
+    Rrpy = (rot_z(yaw) * rot_y(pitch) * rot_x(roll) * R_corr)
     EE = Matrix([req.poses[0].position.x, req.poses[0].position.y, req.poses[0].position.z])
     wc = EE - (d6 + d7) * Rrpy[:3, 2]
 
@@ -237,16 +235,18 @@ def test_code(test_case):
     T0_3 = T0_1 * T1_2 * T2_3
     T0_4 = T0_1 * T1_2 * T2_3 * T3_4
 
-    R0_3 = T0_3.evalf(subs={q1: theta1, q2: theta2, q3: theta3})
-    R3_6 = R0_3.inv("LU") * Rrpy
+    R0_3 = T0_3.evalf(subs={q1: theta1, q2: theta2, q3: theta3})[:3, :3]
+    R3_6 = R0_3.transpose() * Rrpy
 
-    alpha = atan2(R3_6[2, 2], -R3_6[0, 2])
-    beta = atan2(sqrt(R3_6[0, 2] * R3_6[0, 2] + R3_6[2, 2] * R3_6[2, 2]), R3_6[1, 2])
-    gamma = atan2(-R3_6[1, 1], R3_6[1, 0])
+    alpha = round(atan2(R3_6[2, 2], -R3_6[0, 2]), 6)
+    beta = round(atan2(sqrt(R3_6[0, 2] * R3_6[0, 2] + R3_6[2, 2] * R3_6[2, 2]), R3_6[1, 2]), 6)
+    gamma = round(atan2(-R3_6[1, 1], R3_6[1, 0]), 6)
 
     theta4 = alpha
     theta5 = beta
     theta6 = gamma
+
+    print("sets 1: ", theta4, theta5, theta6)
 
     ########################################################################################
     ## For additional debugging add your forward kinematics here. Use your previously calculated thetas
@@ -269,9 +269,13 @@ def test_code(test_case):
     theta5 = -theta5
     theta6 += math.pi
 
-    first = abs(alpha.evalf()) + abs(beta.evalf()) + abs(gamma.evalf())
+    first = abs(alpha) + abs(beta) + abs(gamma)
     second = abs(theta4) + abs(theta5) + abs(theta6)
+
+    print("sets 2: ", theta4, theta5, theta6)
     print("first", first, "second", second)
+
+    print("Reference: " , test_case[2])
 
     # r0_1 = rot_z(theta1)
     # t0_1 = t0 * r0_1
@@ -321,6 +325,7 @@ def test_code(test_case):
         print ("Wrist error for y position is: %04.8f" % wc_y_e)
         print ("Wrist error for z position is: %04.8f" % wc_z_e)
         print ("Overall wrist offset is: %04.8f units" % wc_offset)
+        print ("your Wrist Center ", your_wc)
 
     # Find theta errors
     t_1_e = abs(theta1-test_case[2][0])
@@ -357,6 +362,6 @@ def test_code(test_case):
 
 if __name__ == "__main__":
     # Change test case number for different scenarios
-    test_case_number = 1
+    test_case_number = 4
 
     test_code(test_cases[test_case_number])

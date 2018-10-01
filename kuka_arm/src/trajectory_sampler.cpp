@@ -214,8 +214,10 @@ TrajectorySampler::TrajectorySampler(ros::NodeHandle nh)
      * if demo = 1; use moveit for IK
      *         = 0; use IK_server for IK
      */
+    const std::vector<std::string>& joint_names = joint_model_group->getVariableNames();
     if (demo)
     {
+      robot_current_state = move_group.getCurrentState();
       robot_trajectory->setRobotTrajectoryMsg(robot_kinematic_state, my_plan.trajectory_);
       for (std::size_t i = 0; i < robot_trajectory->getWayPointCount(); ++i)
       {
@@ -224,6 +226,22 @@ TrajectorySampler::TrajectorySampler(ros::NodeHandle nh)
         geometry_msgs::Pose gripper_pose;
         tf::poseEigenToMsg(eef_pose, gripper_pose);
         path.push_back(gripper_pose);
+
+        bool found_ik = robot_current_state->setFromIK(joint_model_group, eef_pose, 10, 0.2);
+        if (found_ik)
+        {
+           robot_current_state->copyJointGroupPositions(joint_model_group,
+                                robot_joint_positions);
+
+           ROS_INFO("[%02f, %02f, %02f, %02f, %02f, %02f]",
+             robot_joint_positions[0], robot_joint_positions[1],
+             robot_joint_positions[2], robot_joint_positions[3],
+             robot_joint_positions[4], robot_joint_positions[5]);
+
+        }
+        else {
+          ROS_DEBUG("Did not find IK solution");
+        }
       }
       path_size = path.size();
       srv.request.poses = path;
